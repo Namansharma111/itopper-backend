@@ -184,7 +184,7 @@ router.get('/:id', async (req, res) => {
 // @desc    Create new evaluation plan
 router.post('/', async (req, res) => {
   try {
-    const { title, category, paperTag, description, features, mrpPrice, finalPrice, duration, badge, purchaseUrl, planPdf, planPdfTitle, tests, published, order } = req.body;
+    const { title, category, paperTag, description, features, mrpPrice, finalPrice, duration, badge, purchaseUrl, planPdf, planPdfTitle, isDayWiseSchedule, totalDays, tests, published, order } = req.body;
     
     const newItem = new Evaluation({
       title,
@@ -199,6 +199,8 @@ router.post('/', async (req, res) => {
       purchaseUrl: purchaseUrl || '/#contact',
       planPdf: planPdf || '',
       planPdfTitle: planPdfTitle || 'Program Syllabus & Micro-Topics Overview PDF',
+      isDayWiseSchedule: !!isDayWiseSchedule,
+      totalDays: parseInt(totalDays || 30),
       tests: Array.isArray(tests) ? tests : [],
       published: published !== undefined ? published : true,
       order: parseInt(order || 0)
@@ -221,7 +223,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Evaluation plan not found' });
     }
 
-    const { title, category, paperTag, description, features, mrpPrice, finalPrice, duration, badge, purchaseUrl, planPdf, planPdfTitle, tests, published, order } = req.body;
+    const { title, category, paperTag, description, features, mrpPrice, finalPrice, duration, badge, purchaseUrl, planPdf, planPdfTitle, isDayWiseSchedule, totalDays, tests, published, order } = req.body;
 
     if (title !== undefined) item.title = title;
     if (category !== undefined) item.category = category;
@@ -237,6 +239,8 @@ router.put('/:id', async (req, res) => {
     if (purchaseUrl !== undefined) item.purchaseUrl = purchaseUrl;
     if (planPdf !== undefined) item.planPdf = planPdf;
     if (planPdfTitle !== undefined) item.planPdfTitle = planPdfTitle;
+    if (isDayWiseSchedule !== undefined) item.isDayWiseSchedule = !!isDayWiseSchedule;
+    if (totalDays !== undefined) item.totalDays = parseInt(totalDays || 30);
     if (tests !== undefined && Array.isArray(tests)) item.tests = tests;
     if (published !== undefined) item.published = published;
     if (order !== undefined) item.order = parseInt(order || 0);
