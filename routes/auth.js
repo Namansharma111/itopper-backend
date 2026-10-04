@@ -181,4 +181,16 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
+// @route   GET /api/auth/all-users
+// @desc    Get all registered users for Admin Analytics
+router.get('/all-users', async (req, res) => {
+  try {
+    const users = await User.find({}, '-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ message: 'Server error fetching users' });
+  }
+});
+
 module.exports = router;
