@@ -5,6 +5,8 @@ const Course = require('../models/Course');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
+const PaymentTransaction = require('../models/PaymentTransaction');
+
 // @route   GET /api/enrollments/all
 // @desc    Get all enrollments (Admin view)
 router.get('/all', async (req, res) => {
@@ -14,6 +16,45 @@ router.get('/all', async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/enrollments/user-purchases
+// @desc    Get student's active enrollments by email or studentId (No auth middleware required for email lookup)
+router.get('/user-purchases', async (req, res) => {
+  try {
+    const { email, studentId } = req.query;
+    if (!email && !studentId) {
+      return res.json({ enrollments: [], transactions: [] });
+    }
+
+    const orConditions = [];
+    if (email) {
+      const cleanEmail = email.trim().toLowerCase();
+      orConditions.push({ studentEmail: cleanEmail });
+      orConditions.push({ studentEmail: new RegExp('^' + cleanEmail + '$', 'i') });
+    }
+    if (studentId) {
+      orConditions.push({ studentId: studentId });
+    }
+
+    const filter = { $or: orConditions };
+
+    const enrollments = await Enrollment.find(filter).sort({ createdAt: -1 });
+
+    // Also check PaymentTransaction for verified purchases
+    const txns = await PaymentTransaction.find({
+      $or: [
+        { studentEmail: email ? email.trim().toLowerCase() : '' },
+        { studentId: studentId || '' }
+      ],
+      status: { $in: ['VERIFIED', 'PAID', 'SUCCESS', 'CREATED'] }
+    }).sort({ createdAt: -1 });
+
+    return res.json({ enrollments, transactions: txns });
+  } catch (err) {
+    console.error('Error fetching user purchases:', err);
+    return res.status(500).json({ message: 'Server error fetching user purchases' });
   }
 });
 
