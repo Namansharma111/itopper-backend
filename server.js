@@ -79,6 +79,7 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/daily-mains', dailyMainsRoutes);
+app.use('/api/prelims-program', require('./routes/prelimsProgram'));
 app.use('/api/payment', paymentRoutes);
 app.use('/api/upload', uploadRoutes);
 

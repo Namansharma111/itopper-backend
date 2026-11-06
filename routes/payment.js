@@ -16,6 +16,8 @@ const getRazorpayInstance = () => {
   });
 };
 
+router.use('/prelims', require('./prelimsPayment')({ getRazorpayInstance }));
+
 // Helper: Auto-refund payment via Razorpay API
 const autoRefundPayment = async ({ paymentId, amount, reason }) => {
   if (!paymentId) return { success: false, message: 'No paymentId provided for refund' };
@@ -99,6 +101,9 @@ const fulfillEnrollment = async ({ studentId, studentName, studentEmail, courseI
 // @route   POST /api/payment/create-order
 // @desc    Create Razorpay Order & persist transaction record
 router.post('/create-order', async (req, res) => {
+  if (req.body.itemType === 'Prelims' || String(req.body.courseId || '').startsWith('prelims-plus-2027-')) {
+    return res.status(400).json({ message: 'Use the authenticated Prelims checkout.' });
+  }
   try {
     const {
       amount,
@@ -191,6 +196,9 @@ router.post('/verify', async (req, res) => {
     let txn = await PaymentTransaction.findOne({ 
       $or: [{ orderId: effectiveOrderId }, { paymentId: razorpay_payment_id }] 
     });
+    if (txn?.itemType === 'Prelims' || itemType === 'Prelims' || String(courseId || '').startsWith('prelims-plus-2027-')) {
+      return res.status(400).json({ message: 'Use the authenticated Prelims verification endpoint.' });
+    }
 
     const secret = (process.env.RAZORPAY_KEY_SECRET || '0ojNxHrUBsUPDjZq7bdYKri0').trim();
     let isAuthentic = false;
@@ -342,6 +350,13 @@ router.post('/webhook', async (req, res) => {
 
       if (orderId) {
         let txn = await PaymentTransaction.findOne({ orderId });
+        if (txn?.itemType === 'Prelims') {
+          if (!webhookSecret) return res.status(503).json({ message: 'Prelims webhook verification is not configured.' });
+          const confirmed = await getRazorpayInstance().payments.fetch(paymentId);
+          if (confirmed.order_id !== txn.orderId || confirmed.status !== 'captured' || confirmed.currency !== txn.currency || confirmed.amount !== Math.round(txn.amount * 100)) {
+            return res.status(400).json({ message: 'Prelims payment details do not match the order.' });
+          }
+        }
         if (!txn) {
           txn = new PaymentTransaction({
             orderId,
@@ -417,7 +432,9 @@ router.get('/status/:orderId', async (req, res) => {
     const razorpayOrder = await razorpay.orders.fetch(orderId);
     const payments = await razorpay.orders.fetchPayments(orderId);
 
-    const successfulPayment = payments.items.find(p => p.status === 'captured' || p.status === 'authorized');
+    const successfulPayment = payments.items.find(p => txn?.itemType === 'Prelims'
+      ? p.status === 'captured' && p.order_id === txn.orderId && p.currency === txn.currency && p.amount === Math.round(txn.amount * 100)
+      : p.status === 'captured' || p.status === 'authorized');
 
     if (successfulPayment) {
       if (!txn) {

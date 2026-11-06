@@ -42,6 +42,13 @@ const BlogSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  seoDescription: { type: String, trim: true, default: '' },
+  focusKeyword: { type: String, trim: true, default: '' },
+  slug: { type: String, trim: true, unique: true, sparse: true },
+  slugHistory: { type: [String], default: [] },
+  canonicalUrl: { type: String, trim: true, default: '' },
+  noIndex: { type: Boolean, default: false },
+  imageAlt: { type: String, trim: true, default: '' },
   date: {
     type: String,
     default: () => new Date().toLocaleDateString("en-US", {
